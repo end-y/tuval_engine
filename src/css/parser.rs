@@ -151,7 +151,7 @@ impl Parser {
     }
     fn parse_color(&mut self, color: String) -> Color {
         if color.starts_with("rgb(") || color.starts_with("rgba(") {
-            let rgb = self.parse_rgb();
+            let rgb = self.parse_rgb(color);
             return Color::RGBA(rgb.0, rgb.1, rgb.2, rgb.3);
         }
         if color.starts_with("hsl(") || color.starts_with("hsla(") {
@@ -175,13 +175,17 @@ impl Parser {
         }
         panic!("Invalid color value: {}", color);
     }
-    fn parse_rgb(&mut self) -> (u8, u8, u8, f32) {
-        let mut rgb = String::new();
-        while !self.eof() && (self.next_char() != ';' && self.next_char() != '}') {
-            rgb.push(self.consume_char());
+    fn parse_rgb(&mut self, color: String) -> (u8, u8, u8, f32) {
+        let color = color.trim_matches(|c: char| !c.is_numeric() || c == '.' || c == '-');
+        let rgb = color.split(',').map(|x| x.trim().parse::<u8>().unwrap()).collect::<Vec<u8>>();
+        println!("RGB: {:?}", rgb);
+        if rgb.len() == 3 {
+            return (rgb[0], rgb[1], rgb[2], 1.0);
+        } else if rgb.len() == 4 {
+            return (rgb[0], rgb[1], rgb[2], rgb[3] as f32);
+        } else {
+            panic!("Invalid RGB value: {}", color);
         }
-        let rgb = rgb.split(',').map(|x| x.parse::<u8>().unwrap()).collect::<Vec<u8>>();
-        (rgb[0], rgb[1], rgb[2], rgb[3] as f32)
     }
     fn parse_length_value(&mut self, length: String) -> f32 {
         length.parse::<f32>().unwrap_or(0.0)
