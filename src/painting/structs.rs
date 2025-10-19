@@ -1,7 +1,7 @@
 use super::enums::Command;
-use crate::html::enums::NodeType;
-use crate::layout::structs::{LayoutBox, Rect};
+use crate::layout::structs::{LayoutBox};
 use crate::css::enums::{Value, Color};
+use crate::html::enums::NodeType;
 use rusttype::{point, Font, Scale};
 
 #[derive(Debug, Default)]

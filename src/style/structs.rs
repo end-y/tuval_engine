@@ -3,40 +3,33 @@ use crate::css::enums::Value;
 use crate::html::structs::{Node, ElementData};
 use crate::html::enums::NodeType;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)] // Clone trait'i eklendi
 pub struct StyledNode<'a> {
     pub node: &'a Node,
     pub specified_values: PropertyMap,
+    pub computed_values: PropertyMap, // Yeni eklendi
     pub children: Vec<StyledNode<'a>>,
 }
 
 pub type PropertyMap = HashMap<String, Value>;
 
 impl<'a> StyledNode<'a> {
+    pub fn new(node: &'a Node, specified_values: PropertyMap, computed_values: PropertyMap, children: Vec<StyledNode<'a>>) -> StyledNode<'a> {
+        StyledNode {
+            node,
+            specified_values,
+            computed_values,
+            children,
+        }
+    }
     // Stil ağacındaki bir özelliği Value olarak döndürür
     pub fn get_property(&self, name: &str) -> Option<&Value> {
-        self.specified_values.get(name)
-    }
-
-    // Stil ağacını girintili bir şekilde yazdırır
-    pub fn pretty_print(&self, indent: usize) {
-        let indent_str = "  ".repeat(indent);
-        match self.node.node_type {
-            NodeType::Element(ref element_data) => {
-                println!("{}<{:?}>", indent_str, element_data.tag_name);
-                for (prop, value) in &self.specified_values {
-                    println!("{}  {}: {:?}", indent_str, prop, value);
-                }
-            },
-            NodeType::Text(ref text) => {
-                println!("{}{}", indent_str, text);
-                for (prop, value) in &self.specified_values {
-                    println!("{}  {}: {:?}", indent_str, prop, value);
-                }
-            }
-        }
-        for child in &self.children {
-            child.pretty_print(indent + 1);
+        // Önce doğrudan belirtilen değerlere bak
+        if let Some(value) = self.specified_values.get(name) {
+            Some(value)
+        } else {
+            // Yoksa hesaplanmış (miras alınmış) değerlere bak
+            self.computed_values.get(name)
         }
     }
 }
@@ -54,15 +47,48 @@ pub fn matching_rules<'a>(elem: &ElementData, stylesheet: &'a crate::css::struct
     matched_rules
 }
 
-// Bir elementi ve CSS kurallarını kullanarak stilize edilmiş bir düğüm oluşturur.
+// Stil ağacını DOM ağacından ve stil sayfasından oluşturan ana fonksiyon
 pub fn style_tree<'a>(root: &'a Node, stylesheet: &'a crate::css::structs::StyleSheet) -> StyledNode<'a> {
-    StyledNode {
-        node: root,
-        specified_values: match root.node_type {
-            NodeType::Element(ref elem) => calculate_style_for_element(elem, stylesheet),
-            NodeType::Text(_) => HashMap::new(),
-        },
-        children: root.children.iter().map(|child| style_tree(child, stylesheet)).collect(),
+    style_tree_recursive(root, stylesheet, &PropertyMap::new())
+}
+
+// Rekürsif yardımcı fonksiyon
+fn style_tree_recursive<'a>(
+    node: &'a Node,
+    stylesheet: &'a crate::css::structs::StyleSheet,
+    parent_computed_styles: &PropertyMap, // Ebeveynin hesaplanmış stilleri
+) -> StyledNode<'a> {
+    let specified_values = match node.node_type {
+        NodeType::Element(ref elem) => calculate_style_for_element(elem, stylesheet),
+        _ => HashMap::new(),
+    };
+
+    let mut computed_values = parent_computed_styles.clone(); // Ebeveyn stillerini miras al
+
+    // Kalıtılabilir özellikleri ebeveyn'den al
+    for (prop, value) in parent_computed_styles.iter() {
+        if is_inheritable_property(prop) {
+            computed_values.insert(prop.clone(), value.clone());
+        }
+    }
+
+    // Kendi belirtilen değerleri miras alınanları ezer
+    for (prop, value) in specified_values.iter() {
+        computed_values.insert(prop.clone(), value.clone());
+    }
+
+    let children = node.children.iter()
+        .map(|child| style_tree_recursive(child, stylesheet, &computed_values)) // Alt düğümlere computed_values'ı geçir
+        .collect();
+
+    StyledNode::new(node, specified_values, computed_values, children) // computed_values'ı ekle
+}
+
+// Bir özelliğin kalıtılabilir olup olmadığını kontrol eden yardımcı fonksiyon
+fn is_inheritable_property(property_name: &str) -> bool {
+    match property_name {
+        "color" | "font-family" | "font-size" | "font-weight" | "line-height" => true,
+        _ => false,
     }
 }
 

@@ -54,9 +54,24 @@ pub struct SelectorType {
 
 impl Selector {
     pub fn matches(&self, element: &ElementData) -> bool {
-        match *self {
-            Selector::Type(ref s) => s.matches(element),
+        let Selector::Type(s) = self;
+        s.matches(element)
+    }
+
+    // Özgüllük değerini hesaplar
+    pub fn specificity(&self) -> (usize, usize, usize) {
+        let Selector::Type(selector) = self;
+        let mut specificity = (0, 0, 0);
+        if let Some(_) = &selector.id {
+            specificity.0 += 1;
         }
+        for _class in &selector.class {
+            specificity.1 += 1;
+        }
+        if let Some(_) = &selector.tag_name {
+            specificity.2 += 1;
+        }
+        specificity
     }
 }
 

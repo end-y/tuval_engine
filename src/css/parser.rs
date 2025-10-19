@@ -1,5 +1,5 @@
 use super::enums::{Value, Selector, Color, Unit, Display};
-use super::structs::{StyleSheet, Rule, Declaration, Specificity};
+use super::structs::{StyleSheet, Rule, Declaration};
 use crate::css::enums::{SelectorType};
 
 pub struct Parser {
@@ -230,62 +230,5 @@ impl Parser {
             self.consume_whitespace();
         }
         StyleSheet { rules }
-    }
-}
-impl StyleSheet {
-    pub fn pretty_print(&self, indent: usize) {
-        for rule in &self.rules {
-            rule.pretty_print(indent);
-        }
-    }
-}
-impl Rule {
-    pub fn pretty_print(&self, indent: usize) {
-        let indent_str = " ".repeat(indent);
-        println!("{}Rule:", indent_str);
-        println!("{}  Selectors:", indent_str);
-        for selector in &self.selectors {
-            selector.pretty_print(indent + 4);
-        }
-        println!("{}  Declarations:", indent_str);
-        for declaration in &self.declarations {
-            declaration.pretty_print(indent + 4);
-        }
-    }
-}
-impl Selector {
-    pub fn specificity(&self) -> Specificity {
-        let Selector::Type(selector) = self;
-        let mut specificity = (0, 0, 0);
-        if let Some(_) = &selector.id {
-            specificity.0 += 1;
-        }
-        for _class in &selector.class {
-            specificity.1 += 1;
-        }
-        if let Some(_) = &selector.tag_name {
-            specificity.2 += 1;
-        }
-        specificity
-    }
-    pub fn pretty_print(&self, indent: usize) {
-        let indent_str = " ".repeat(indent);
-        let Selector::Type(selector) = self;
-        println!("{}Selector:", indent_str);
-        if let Some(tag_name) = &selector.tag_name {
-            println!("{}  Tag Name: {}", indent_str, tag_name);
-        }
-        if let Some(id) = &selector.id {
-            println!("{}  Id: {}", indent_str, id);
-        }
-        for class in &selector.class {
-            println!("{}  Class: {}", indent_str, class);
-        }
-    }
-}
-impl Declaration {
-    pub fn pretty_print(&self, indent: usize) {
-        let indent_str = " ".repeat(indent);
-        println!("{}Declaration: {}: {:?}", indent_str, self.property, self.value);
     }
 }

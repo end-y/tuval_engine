@@ -11,8 +11,6 @@ pub struct Rule {
     pub declarations: Vec<Declaration>,
 }
 
-pub type Specificity = (usize, usize, usize);
-
 #[derive(Debug, Clone)]
 pub struct Declaration {
     pub property: String,
