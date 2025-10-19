@@ -1,24 +1,20 @@
-use super::enums::{Value, Selector};
+use crate::css::enums::{Value, Selector};
 
+#[derive(Debug, Clone)]
 pub struct StyleSheet {
     pub rules: Vec<Rule>,
 }
 
-pub type Specificity = (usize, usize, usize);
-
-pub struct SelectorType {
-    pub tag_name: Option<String>,
-    pub id: Option<String>,
-    pub class: Vec<String>,
-}
-
-#[derive(Debug)]
-pub struct Declaration {
-    pub property: String,
-    pub value: Value,
-}
-
+#[derive(Debug, Clone)]
 pub struct Rule {
     pub selectors: Vec<Selector>,
     pub declarations: Vec<Declaration>,
+}
+
+pub type Specificity = (usize, usize, usize);
+
+#[derive(Debug, Clone)]
+pub struct Declaration {
+    pub property: String,
+    pub value: Value,
 }

@@ -1,10 +1,10 @@
 //enums
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum NodeType {
     Element(super::structs::ElementData),
     Text(String),
 }
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum AttrName {
     Class,
     Id,
@@ -38,7 +38,7 @@ pub enum AttrName {
     Enctype,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum TagName {
     Html,
     Head,
@@ -98,4 +98,10 @@ pub enum TagName {
     Kbd,
     Q,
     Var,
+}
+
+impl std::fmt::Display for TagName {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }

@@ -1,5 +1,6 @@
-use super::enums::{Value, Selector, Color, Unit};
-use super::structs::{StyleSheet, Rule, Declaration, SelectorType, Specificity};
+use super::enums::{Value, Selector, Color, Unit, Display};
+use super::structs::{StyleSheet, Rule, Declaration, Specificity};
+use crate::css::enums::{SelectorType};
 
 pub struct Parser {
     pos: usize,
@@ -38,7 +39,17 @@ impl Parser {
     }
     fn parse_selector(&mut self) -> SelectorType {
         let mut selector = SelectorType { tag_name: None, id: None, class: vec![] };
-        while !self.eof() {
+
+        // İlk olarak etiket adı veya evrensel seçiciyi kontrol et
+        if !self.eof() && (valid_identifier(self.next_char()) || self.next_char() == '*') {
+            selector.tag_name = Some(self.parse_identifier());
+        }
+
+        // Ardından ID ve sınıf seçicilerini döngüde kontrol et
+        loop {
+            if self.eof() {
+                break;
+            }
             match self.next_char() {
                 '#' => {
                     self.consume_char();
@@ -48,16 +59,15 @@ impl Parser {
                     self.consume_char();
                     selector.class.push(self.parse_identifier());
                 }
-                '*' => {
-                    selector.tag_name = Some(self.parse_identifier());
-                }
-                c if valid_identifier(c) => {
+                // Eğer hala bir tag_name ayarlanmadıysa ve geçerli bir tanımlayıcıysa
+                c if selector.tag_name.is_none() && valid_identifier(c) => {
                     selector.tag_name = Some(self.parse_identifier());
                 }
                 _ => {
-                    break;
+                    break; // Diğer karakterlerde döngüyü sonlandır (örn: boşluk, {, ,)
                 }
-            }}
+            }
+        }
         selector
     }
     fn parse_selectors(&mut self) -> Vec<Selector> {
@@ -106,16 +116,28 @@ impl Parser {
         self.consume_whitespace();
         assert_eq!(self.consume_char(), ':');
         self.consume_whitespace();
-        let value = self.parse_value();
+        let value = self.parse_value(&property);
         self.consume_whitespace();
         assert_eq!(self.consume_char(), ';');
         Declaration { property, value }
     }
-    fn parse_value(&mut self) -> Value {
+    fn parse_value(&mut self, property: &str) -> Value {
         let mut value = String::new();
         while !self.eof() && (self.next_char() != ';' && self.next_char() != '}') {
             value.push(self.consume_char());
         }
+
+        let trimmed_value = value.trim().to_lowercase();
+
+        if property == "display" {
+            match trimmed_value.as_str() {
+                "block" => return Value::Display(Display::Block),
+                "inline" => return Value::Display(Display::Inline),
+                "none" => return Value::Display(Display::None),
+                _ => {},
+            }
+        }
+
         if is_color_value(&value) {
             return Value::Color(self.parse_color(value));
         }
@@ -212,12 +234,6 @@ impl StyleSheet {
             rule.pretty_print(indent);
         }
     }
-    pub fn print_node(&self) {
-        println!("StyleSheet:");
-        for rule in &self.rules {
-            rule.print_node();
-        }
-    }
 }
 impl Rule {
     pub fn pretty_print(&self, indent: usize) {
@@ -230,15 +246,6 @@ impl Rule {
         println!("{}  Declarations:", indent_str);
         for declaration in &self.declarations {
             declaration.pretty_print(indent + 4);
-        }
-    }
-    pub fn print_node(&self) {
-        println!("  Rule:");
-        for selector in &self.selectors {
-            selector.print_node();
-        }
-        for declaration in &self.declarations {
-            declaration.print_node();
         }
     }
 }
@@ -271,25 +278,10 @@ impl Selector {
             println!("{}  Class: {}", indent_str, class);
         }
     }
-    pub fn print_node(&self) {
-        let Selector::Type(selector) = self;
-        if let Some(tag_name) = &selector.tag_name {
-            println!("    Tag Name: {}", tag_name);
-        }
-        if let Some(id) = &selector.id {
-            println!("    Id: {}", id);
-        }
-        for class in &selector.class {
-            println!("    Class: {}", class);
-        }
-    }
 }
 impl Declaration {
     pub fn pretty_print(&self, indent: usize) {
         let indent_str = " ".repeat(indent);
         println!("{}Declaration: {}: {:?}", indent_str, self.property, self.value);
-    }
-    pub fn print_node(&self) {
-        println!("      Declaration: {}: {:?}", self.property, self.value);
     }
 }
