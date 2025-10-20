@@ -16,3 +16,12 @@ pub struct Node {
 
 impl Node {
 }
+
+impl std::fmt::Display for Node {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self.node_type {
+            NodeType::Element(ref element_data) => write!(f, "<{:?}>", element_data.tag_name),
+            NodeType::Text(ref text) => write!(f, "{}", text),
+        }
+    }
+}

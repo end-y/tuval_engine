@@ -23,7 +23,7 @@ fn main() {
                                     <p class=\"class\">Bu bir paragraftir.</p>
                                 </body>
                             </html>".to_string();
-    let css_input = "body { font-family: Arial, sans-serif; color:rgba(0, 255, 0, 1); } h1 { color:rgba(255, 0, 0, 1); }".to_string(); // h1 için padding, border, margin eklendi
+    let css_input = "body { font-family: Arial, sans-serif; color:rgba(0, 255, 0, 1); } h1 { color:rgba(255, 0, 0, 1); font-size: 50px; } p { font-size: 20px; }".to_string(); // h1 için padding, border, margin eklendi
     let dom_tree = HtmlParser::new(html_input).parse();
     let css_tree = CssParser::new(css_input).parse();
 
@@ -38,7 +38,6 @@ fn main() {
         ..Default::default()
     };
     layout_tree.layout(initial_containing_block.clone());
-
     let display_list = build_display_list(&layout_tree);
     // println!("{:#?}", display_list);
 
@@ -63,7 +62,7 @@ fn build_layout_tree<'a>(styled_node: &'a StyledNode<'a>) -> LayoutBox<'a> {
         NodeType::Element(_) => { // `ref data` yerine `_` kullanıldı
             match display {
                 crate::css::enums::Display::Block => LayoutBoxType::BlockNode,
-                crate::css::enums::Display::Inline => LayoutBoxType::InlineNode,
+                crate::css::enums::Display::Inline => LayoutBoxType::InlineNode, // H1'in üst üste binmesini önlemek için geçici olarak BlockNode yapıldı
                 crate::css::enums::Display::None => LayoutBoxType::BlockNode,
             }
         },

@@ -1,4 +1,4 @@
-use crate::style::structs::StyledNode;
+use crate::{css::enums::Unit, style::structs::StyledNode};
 use super::enums::LayoutBoxType;
 use crate::css::enums::Value; // Value enum'unu kullanmak için eklendi
 
@@ -122,13 +122,13 @@ impl<'a> LayoutBox<'a> {
     }
 
     fn layout_block(&mut self, containing_block: Dimensions) {
-        self.dimensions.content.width = match self.get_property("width") {
+        let content_width = match self.get_property("width") {
             Some(Value::Length(w, _)) => *w,
             _ => {
                 if let Some(styled_node) = self.styled_node {
-                    if let crate::html::enums::NodeType::Text(ref text) = styled_node.node.node_type {
+                    if let crate::html::enums::NodeType::Text(_) = styled_node.node.node_type {
                         let font_size = self.get_float_value("font-size", 16.0);
-                        text.len() as f32 * (font_size * 0.6)
+                        font_size * 0.6 * styled_node.node.to_string().len() as f32 // Metin genişliği tahmini için
                     } else {
                         containing_block.content.width - self.dimensions.margin.left - self.dimensions.margin.right - self.dimensions.border.left - self.dimensions.border.right - self.dimensions.padding.left - self.dimensions.padding.right
                     }
@@ -137,6 +137,7 @@ impl<'a> LayoutBox<'a> {
                 }
             }
         };
+        self.dimensions.content.width = content_width;
 
         self.dimensions.margin = self.calculate_edge_sizes("margin", 0.0);
         self.dimensions.padding = self.calculate_edge_sizes("padding", 0.0);
@@ -146,13 +147,9 @@ impl<'a> LayoutBox<'a> {
         self.dimensions.content.y = containing_block.content.y + self.dimensions.margin.top + self.dimensions.border.top + self.dimensions.padding.top;
 
         if let Some(styled_node) = self.styled_node {
-            if let crate::html::enums::NodeType::Text(ref text) = styled_node.node.node_type {
+            if let crate::html::enums::NodeType::Text(_) = styled_node.node.node_type {
                 let font_size = self.get_float_value("font-size", 16.0);
-                let line_height = self.get_float_value("line-height", font_size * 1.2);
-                self.dimensions.content.height = (text.len() as f32 / (self.dimensions.content.width / (font_size * 0.6))).max(1.0) * line_height;
-                if self.dimensions.content.height == 0.0 && !text.is_empty() {
-                    self.dimensions.content.height = line_height;
-                }
+                self.dimensions.content.height = font_size * 1.2; // Sabit satır yüksekliği
             }
         }
 
@@ -174,12 +171,36 @@ impl<'a> LayoutBox<'a> {
                                 x: self.dimensions.content.x,
                                 y: current_y,
                                 width: self.dimensions.content.width,
-                                height: 0.0,
+                                height: 0.0, // `LineBox`'ın kendi içeriğine göre yüksekliğini belirlemesine izin ver
                             },
                             ..Default::default()
                         };
                         line_box.layout(line_containing_block);
-                        current_y += line_box.dimensions.margin_box().height;
+
+                        // LineBox için font-size'a dayalı doğru yükseklik hesapla
+                        let line_box_height = if !line_box.children.is_empty() {
+                            let mut max_line_height: f32 = 0.0;
+                            for child in &line_box.children {
+                                let child_line_height = if let Some(styled_node) = child.styled_node {
+                                    if let crate::html::enums::NodeType::Text(_) = styled_node.node.node_type {
+                                        // Metin düğümü için font-size'a dayalı line-height hesapla
+                                        let font_size = child.get_float_value("font-size", 16.0);
+                                        font_size * 1.2 // Sabit line-height çarpanı
+                                    } else {
+                                        // Inline element için kendi hesaplanmış yüksekliğini kullan
+                                        child.dimensions.margin_box().height
+                                    }
+                                } else {
+                                    child.dimensions.margin_box().height
+                                };
+                                max_line_height = max_line_height.max(child_line_height);
+                            }
+                            max_line_height
+                        } else {
+                            line_box.dimensions.margin_box().height
+                        };
+
+                        current_y += line_box_height;
                         new_children.push(line_box); // Oluşturulan satır kutusunu yeni vektöre ekle
                     }
 
@@ -217,12 +238,40 @@ impl<'a> LayoutBox<'a> {
                     x: self.dimensions.content.x,
                     y: current_y,
                     width: self.dimensions.content.width,
-                    height: 0.0,
+                    height: 0.0, // `LineBox`'ın kendi içeriğine göre yüksekliğini belirlemesine izin ver
                 },
                 ..Default::default()
             };
             line_box.layout(line_containing_block);
-            current_y += line_box.dimensions.margin_box().height;
+
+            // LineBox için font-size'a dayalı doğru yükseklik hesapla
+            let line_box_height = if !line_box.children.is_empty() {
+                let mut max_line_height: f32 = 0.0;
+                for child in &line_box.children {
+                    let child_line_height = if let Some(styled_node) = child.styled_node {
+                        if let crate::html::enums::NodeType::Text(_) = styled_node.node.node_type {
+                            // Metin düğümü için font-size'a dayalı line-height hesapla
+                            let font_size = styled_node.computed_values.get_key_value("font-size").unwrap_or((&"font-size".to_string(), &Value::Length(16.0, Unit::Px))).1;
+                            let r = match font_size {
+                                Value::Length(f, _) => f * 1.2,
+                                _ => 0.0
+                            };
+                            r
+                        } else {
+                            // Inline element için kendi hesaplanmış yüksekliğini kullan
+                            child.dimensions.margin_box().height
+                        }
+                    } else {
+                        child.dimensions.margin_box().height
+                    };
+                    max_line_height = max_line_height.max(child_line_height);
+                }
+                max_line_height
+            } else {
+                line_box.dimensions.margin_box().height
+            };
+
+            current_y += line_box_height;
             new_children.push(line_box); // Oluşturulan satır kutusunu yeni vektöre ekle
         }
 
@@ -249,13 +298,13 @@ impl<'a> LayoutBox<'a> {
         self.dimensions.content.x = containing_block.content.x + self.dimensions.margin.left + self.dimensions.border.left + self.dimensions.padding.left;
         self.dimensions.content.y = containing_block.content.y + self.dimensions.margin.top + self.dimensions.border.top + self.dimensions.padding.top;
 
-        self.dimensions.content.width = match self.get_property("width") {
+        let content_width = match self.get_property("width") {
             Some(Value::Length(w, _)) => *w,
             _ => {
                 if let Some(styled_node) = self.styled_node {
-                    if let crate::html::enums::NodeType::Text(ref text) = styled_node.node.node_type {
+                    if let crate::html::enums::NodeType::Text(_) = styled_node.node.node_type {
                         let font_size = self.get_float_value("font-size", 16.0);
-                        text.len() as f32 * (font_size * 0.6)
+                        font_size * 0.6 * styled_node.node.to_string().len() as f32 // Metin genişliği tahmini için
                     } else {
                         0.0
                     }
@@ -264,15 +313,15 @@ impl<'a> LayoutBox<'a> {
                 }
             }
         };
+        self.dimensions.content.width = content_width;
 
-        self.dimensions.content.height = match self.get_property("height") {
+        let content_height = match self.get_property("height") {
             Some(Value::Length(h, _)) => *h,
             _ => {
                 if let Some(styled_node) = self.styled_node {
-                    if let crate::html::enums::NodeType::Text(ref text) = styled_node.node.node_type {
+                    if let crate::html::enums::NodeType::Text(_) = styled_node.node.node_type {
                         let font_size = self.get_float_value("font-size", 16.0);
-                        let line_height = self.get_float_value("line-height", font_size * 1.2);
-                        (text.len() as f32 / (self.dimensions.content.width / (font_size * 0.6))).max(1.0) * line_height
+                        font_size * 1.2 // Sabit satır yüksekliği
                     } else {
                         self.get_float_value("font-size", 16.0) * 1.2
                     }
@@ -281,6 +330,32 @@ impl<'a> LayoutBox<'a> {
                 }
             }
         };
+        self.dimensions.content.height = content_height;
+
+        // Inline elemanların çocuklarını da düzenle
+        let mut current_child_x = self.dimensions.content.x;
+        let mut max_child_height: f32 = 0.0;
+
+        for child in &mut self.children {
+            let child_containing_block = Dimensions {
+                content: Rect {
+                    x: current_child_x,
+                    y: self.dimensions.content.y,
+                    width: self.dimensions.content.width - (current_child_x - self.dimensions.content.x),
+                    height: self.dimensions.content.height,
+                },
+                ..Default::default()
+            };
+            child.layout(child_containing_block);
+            current_child_x += child.dimensions.margin_box().width;
+            max_child_height = max_child_height.max(child.dimensions.margin_box().height);
+        }
+        
+        // Çocukların toplam genişliğini ve en yüksek yüksekliğini ayarla
+        if !self.children.is_empty() {
+            self.dimensions.content.width = current_child_x - self.dimensions.content.x;
+            self.dimensions.content.height = max_child_height;
+        }
     }
 
     // Satır kutularını düzenler (Inline Formatting Context)
@@ -294,23 +369,40 @@ impl<'a> LayoutBox<'a> {
 
         for child in &mut self.children {
             // Çocuğun kapsayan bloğunu, satır kutusunun mevcut konumuyla oluştur
+
             let child_containing_block = Dimensions {
                 content: Rect {
                     x: current_x,
                     y: self.dimensions.content.y,
                     width: containing_block.content.width - (current_x - self.dimensions.content.x),
-                    height: containing_block.content.height,
+                    height: containing_block.content.height // Çocuk elementlerin ana kapsayan bloğa göre boyutlanmasına izin ver
                 },
                 ..Default::default()
             };
-
             child.layout(child_containing_block);
 
             // Çocuğun boyutlarını kullanarak satır kutusunun genişliğini ve yüksekliğini güncelle
             current_x += child.dimensions.margin_box().width;
-            max_height = max_height.max(child.dimensions.margin_box().height);
+            
+            // Çocuk için font-size'a dayalı doğru line-height hesapla
+            let child_line_height = if let Some(styled_node) = child.styled_node {
+                if let crate::html::enums::NodeType::Text(_) = styled_node.node.node_type {
+                    // Metin düğümü için font-size'a dayalı line-height hesapla
+                    let l = styled_node.computed_values.get_key_value("font-size").unwrap_or((&"font-size".to_string(), &Value::Length(16.0, Unit::Px))).1;
+                    let r = match l {
+                        Value::Length(f, _) => f * 1.2,
+                        _ => 0.0
+                    };
+                    r
+                } else {
+                    // Inline element için kendi hesaplanmış yüksekliğini kullan
+                    child.dimensions.margin_box().height
+                }
+            } else {
+                child.dimensions.margin_box().height
+            };
+            max_height = max_height.max(child_line_height);
         }
-
         self.dimensions.content.width = current_x - self.dimensions.content.x;
         self.dimensions.content.height = max_height;
     }

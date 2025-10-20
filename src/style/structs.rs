@@ -2,6 +2,20 @@ use std::collections::HashMap;
 use crate::css::enums::Value;
 use crate::html::structs::{Node, ElementData};
 use crate::html::enums::NodeType;
+use lazy_static::lazy_static; // lazy_static import'u eklendi
+use crate::css::enums::Display; // Display enum'u için import eklendi
+
+lazy_static! {
+    static ref DEFAULT_DISPLAY_STYLES: HashMap<String, Display> = {
+        let mut m = HashMap::new();
+        m.insert("div".to_string(), Display::Block);
+        m.insert("p".to_string(), Display::Block);
+        m.insert("h1".to_string(), Display::Block);
+        m.insert("span".to_string(), Display::Inline);
+        // Diğer varsayılan display değerlerini buraya ekleyebilirsiniz
+        m
+    };
+}
 
 #[derive(Debug, Clone)] // Clone trait'i eklendi
 pub struct StyledNode<'a> {
@@ -96,6 +110,13 @@ fn is_inheritable_property(property_name: &str) -> bool {
 fn calculate_style_for_element(elem: &ElementData, stylesheet: &crate::css::structs::StyleSheet) -> PropertyMap {
     let mut properties = HashMap::new();
     let mut rules = matching_rules(elem, stylesheet);
+
+    // Varsayılan display stilini ekle, eğer CSS tarafından ezilmediyse
+    if !properties.contains_key("display") {
+        if let Some(default_display) = DEFAULT_DISPLAY_STYLES.get(&elem.tag_name.to_string()) {
+            properties.insert("display".to_string(), Value::Display(default_display.clone()));
+        }
+    }
 
     // Özgüllüğe göre sırala (en özgül sona gelsin)
     rules.sort_by_key(|rule| rule.selectors[0].specificity());
