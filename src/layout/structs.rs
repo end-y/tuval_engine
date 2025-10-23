@@ -1,7 +1,12 @@
+//! Layout module
+//!
+//! This module handles the layout calculation for styled nodes.
+
 use crate::{css::enums::Unit, style::structs::StyledNode};
 use super::enums::LayoutBoxType;
-use crate::css::enums::Value; // Value enum'unu kullanmak için eklendi
+use crate::css::enums::Value;
 
+/// Represents a layout box in the render tree
 #[derive(Debug)]
 pub struct LayoutBox<'a> {
     pub dimensions: Dimensions,
@@ -10,7 +15,8 @@ pub struct LayoutBox<'a> {
     pub styled_node: Option<&'a StyledNode<'a>>, // Stil ağacındaki ilgili düğüme referans
 }
 
-#[derive(Debug, Default, Clone)] // Clone trait'i eklendi
+/// Represents the dimensions of a layout box including content, padding, border, and margin
+#[derive(Debug, Default, Clone)]
 pub struct Dimensions {
     pub content: Rect,
     pub padding: EdgeSizes,
@@ -35,7 +41,8 @@ impl Dimensions {
     }
 }
 
-#[derive(Debug, Default, Clone)] // Clone trait'i eklendi
+/// Represents a rectangle with position and size
+#[derive(Debug, Default, Clone)]
 pub struct Rect {
     pub x: f32,
     pub y: f32,
@@ -55,7 +62,8 @@ impl Rect {
     }
 }
 
-#[derive(Debug, Default, Clone)] // Clone trait'i eklendi
+/// Represents the sizes of edges (top, right, bottom, left)
+#[derive(Debug, Default, Clone)]
 pub struct EdgeSizes {
     pub left: f32,
     pub right: f32,
@@ -122,6 +130,12 @@ impl<'a> LayoutBox<'a> {
     }
 
     fn layout_block(&mut self, containing_block: Dimensions) {
+        // ÖNCE margin, padding, border'ı hesapla
+        self.dimensions.margin = self.calculate_edge_sizes("margin", 0.0);
+        self.dimensions.padding = self.calculate_edge_sizes("padding", 0.0);
+        self.dimensions.border = self.calculate_edge_sizes("border", 0.0);
+
+        // SONRA genişliği hesapla (artık padding, margin, border biliniyor)
         let content_width = match self.get_property("width") {
             Some(Value::Length(w, _)) => *w,
             _ => {
@@ -138,10 +152,6 @@ impl<'a> LayoutBox<'a> {
             }
         };
         self.dimensions.content.width = content_width;
-
-        self.dimensions.margin = self.calculate_edge_sizes("margin", 0.0);
-        self.dimensions.padding = self.calculate_edge_sizes("padding", 0.0);
-        self.dimensions.border = self.calculate_edge_sizes("border", 0.0);
 
         self.dimensions.content.x = containing_block.content.x + self.dimensions.margin.left + self.dimensions.border.left + self.dimensions.padding.left;
         self.dimensions.content.y = containing_block.content.y + self.dimensions.margin.top + self.dimensions.border.top + self.dimensions.padding.top;

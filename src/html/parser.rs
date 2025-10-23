@@ -1,7 +1,12 @@
+//! HTML parser module
+//!
+//! This module provides functionality for parsing HTML strings into a DOM tree.
+
 use std::collections::HashMap;
 use super::enums::{AttrName, NodeType, TagName};
 use super::structs::{ElementData, Node};
 
+/// HTML parser that converts HTML strings into a DOM tree
 pub struct Parser {
     pub pos: usize,
     pub input: String,

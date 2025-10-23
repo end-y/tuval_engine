@@ -19,11 +19,31 @@ fn main() {
                                     <title>Merhaba Dunya</title>
                                 </head>
                                 <body>
+                                <div class=\"class2\">
+                                <div class=\"class\">
                                     <h1>Merhaba Dunya</h1>
                                     <p class=\"class\">Bu bir paragraftir.</p>
+                                </div>
+                                </div>
                                 </body>
                             </html>".to_string();
-    let css_input = "body { font-family: Arial, sans-serif; color:rgba(0, 255, 0, 1); } h1 { color:rgba(255, 0, 0, 1); font-size: 50px; } p { font-size: 20px; }".to_string(); // h1 için padding, border, margin eklendi
+    let css_input = "body { 
+                                    font-family: Arial, sans-serif; 
+                                    color:rgba(0, 255, 0, 1); } 
+                            h1 { 
+                                color:rgba(255, 0, 0, 1); 
+                                font-size: 50px; 
+                                } 
+                            p { 
+                                font-size: 20px; 
+                            } 
+                            .class { 
+                                background-color:rgba(0, 0, 255, 1); 
+                            }
+                            .class2 { 
+                                background-color:rgba(255, 255, 0, 1); 
+                                padding: 20px;
+                            }".to_string();
     let dom_tree = HtmlParser::new(html_input).parse();
     let css_tree = CssParser::new(css_input).parse();
 

@@ -1,9 +1,15 @@
-//enums
+//! HTML parsing enums module
+//!
+//! This module defines the core enums used for HTML parsing,
+//! including node types, attribute names, and tag names.
+
+/// Represents the type of an HTML node (Element or Text)
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum NodeType {
     Element(super::structs::ElementData),
     Text(String),
 }
+/// Represents HTML attribute names
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum AttrName {
     Class,
@@ -38,6 +44,7 @@ pub enum AttrName {
     Enctype,
 }
 
+/// Represents HTML tag names
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum TagName {
     Html,

@@ -1,9 +1,13 @@
+//! Style tree module
+//!
+//! This module handles the creation of styled nodes by applying CSS rules to HTML nodes.
+
 use std::collections::HashMap;
 use crate::css::enums::Value;
 use crate::html::structs::{Node, ElementData};
 use crate::html::enums::NodeType;
-use lazy_static::lazy_static; // lazy_static import'u eklendi
-use crate::css::enums::Display; // Display enum'u için import eklendi
+use lazy_static::lazy_static;
+use crate::css::enums::Display;
 
 lazy_static! {
     static ref DEFAULT_DISPLAY_STYLES: HashMap<String, Display> = {
@@ -17,7 +21,8 @@ lazy_static! {
     };
 }
 
-#[derive(Debug, Clone)] // Clone trait'i eklendi
+/// Represents a node with computed styles applied
+#[derive(Debug, Clone)]
 pub struct StyledNode<'a> {
     pub node: &'a Node,
     pub specified_values: PropertyMap,
@@ -25,6 +30,7 @@ pub struct StyledNode<'a> {
     pub children: Vec<StyledNode<'a>>,
 }
 
+/// Type alias for a map of CSS property names to values
 pub type PropertyMap = HashMap<String, Value>;
 
 impl<'a> StyledNode<'a> {
@@ -50,15 +56,9 @@ impl<'a> StyledNode<'a> {
 
 // Bir DOM düğümüne uyan tüm CSS kurallarını bulur
 pub fn matching_rules<'a>(elem: &ElementData, stylesheet: &'a crate::css::structs::StyleSheet) -> Vec<&'a crate::css::structs::Rule> {
-    let matched_rules: Vec<&crate::css::structs::Rule> = stylesheet.rules.iter().filter(|rule| {
-        let is_match = rule.selectors.iter().any(|selector| selector.matches(elem));
-        if is_match {
-            println!("Matching rule found for element {:?}: {:?}", elem.tag_name, rule);
-        }
-        is_match
-    }).collect();
-    println!("Total matching rules for element {:?}: {}", elem.tag_name, matched_rules.len());
-    matched_rules
+    stylesheet.rules.iter().filter(|rule| {
+        rule.selectors.iter().any(|selector| selector.matches(elem))
+    }).collect()
 }
 
 // Stil ağacını DOM ağacından ve stil sayfasından oluşturan ana fonksiyon
@@ -121,14 +121,10 @@ fn calculate_style_for_element(elem: &ElementData, stylesheet: &crate::css::stru
     // Özgüllüğe göre sırala (en özgül sona gelsin)
     rules.sort_by_key(|rule| rule.selectors[0].specificity());
 
-    println!("Calculating style for element {:?}", elem.tag_name);
     for rule in &rules {
-        println!("  Applying rule: {:?}", rule);
         for declaration in &rule.declarations {
-            println!("    Inserting property: {}: {:?}", declaration.property, declaration.value);
             properties.insert(declaration.property.clone(), declaration.value.clone());
         }
     }
-    println!("Final properties for element {:?}: {:?}", elem.tag_name, properties);
     properties
 }

@@ -1,7 +1,12 @@
+//! CSS parser module
+//!
+//! This module provides functionality for parsing CSS strings into a stylesheet.
+
 use super::enums::{Value, Selector, Color, Unit, Display};
 use super::structs::{StyleSheet, Rule, Declaration};
 use crate::css::enums::{SelectorType};
 
+/// CSS parser that converts CSS strings into a stylesheet
 pub struct Parser {
     pos: usize,
     input: String,
@@ -176,13 +181,20 @@ impl Parser {
         panic!("Invalid color value: {}", color);
     }
     fn parse_rgb(&mut self, color: String) -> (u8, u8, u8, f32) {
-        let color = color.trim_matches(|c: char| !c.is_numeric() || c == '.' || c == '-');
-        let rgb = color.split(',').map(|x| x.trim().parse::<u8>().unwrap()).collect::<Vec<u8>>();
-        println!("RGB: {:?}", rgb);
-        if rgb.len() == 3 {
-            return (rgb[0], rgb[1], rgb[2], 1.0);
-        } else if rgb.len() == 4 {
-            return (rgb[0], rgb[1], rgb[2], rgb[3] as f32);
+        let color = color.trim_matches(|c: char| !c.is_numeric() && c != '.' && c != ',' && c != ' ');
+        let parts: Vec<&str> = color.split(',').map(|x| x.trim()).collect();
+        
+        if parts.len() == 3 {
+            let r = parts[0].parse::<u8>().unwrap_or(0);
+            let g = parts[1].parse::<u8>().unwrap_or(0);
+            let b = parts[2].parse::<u8>().unwrap_or(0);
+            return (r, g, b, 1.0);
+        } else if parts.len() == 4 {
+            let r = parts[0].parse::<u8>().unwrap_or(0);
+            let g = parts[1].parse::<u8>().unwrap_or(0);
+            let b = parts[2].parse::<u8>().unwrap_or(0);
+            let a = parts[3].parse::<f32>().unwrap_or(1.0);
+            return (r, g, b, a);
         } else {
             panic!("Invalid RGB value: {}", color);
         }

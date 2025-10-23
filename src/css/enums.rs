@@ -1,6 +1,11 @@
+//! CSS enums module
+//!
+//! This module defines enums for CSS values, selectors, and display types.
+
 use crate::html::structs::ElementData;
 use crate::html::enums::AttrName;
 
+/// Represents a CSS value (length, color, keyword, or display)
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub enum Value {
@@ -9,6 +14,7 @@ pub enum Value {
     Keyword(String),
     Display(Display), // Yeni eklendi
 }
+/// Represents CSS length units
 #[derive(Debug, Clone)]
 pub enum Unit {
     Px,
@@ -19,6 +25,7 @@ pub enum Unit {
     Vmin,
     Vmax,
 }
+/// Represents CSS color values
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub enum Color {
@@ -26,7 +33,8 @@ pub enum Color {
     HSLA(f32, f32, f32, f32),
 }
 
-#[derive(Debug, Clone, PartialEq)] // PartialEq eklendi
+/// Represents CSS display property values
+#[derive(Debug, Clone, PartialEq)]
 pub enum Display {
     Inline,
     Block,
@@ -40,11 +48,13 @@ impl Default for Display {
     }
 }
 
+/// Represents a CSS selector
 #[derive(Debug, Clone)]
 pub enum Selector {
     Type(SelectorType),
 }
 
+/// Represents a type selector with optional tag name, id, and classes
 #[derive(Debug, Clone)]
 pub struct SelectorType {
     pub tag_name: Option<String>,

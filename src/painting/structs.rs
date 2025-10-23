@@ -1,9 +1,14 @@
+//! Painting module
+//!
+//! This module handles converting layout boxes into display commands and rendering to images.
+
 use super::enums::Command;
 use crate::layout::structs::{LayoutBox};
 use crate::css::enums::{Value, Color};
 use crate::html::enums::NodeType;
 use rusttype::{point, Font, Scale};
 
+/// Represents a list of display commands to be rendered
 #[derive(Debug, Default)]
 pub struct DisplayList {
     pub commands: Vec<Command>,
@@ -16,31 +21,14 @@ pub fn build_display_list(layout_root: &LayoutBox) -> DisplayList {
 }
 
 fn render_layout_box(list: &mut DisplayList, layout_box: &LayoutBox) {
-    // Metin düğümleri için metin çizim komutlarını oluştur
-    let mut default_color = Color::RGBA(0, 0, 0, 1.0);
-    let mut default_font_size = 16.0;
-    if let Some(styled_node) = layout_box.styled_node {
-        if let Some(Value::Color(color)) = styled_node.get_property("color") {
-            default_color = color.clone();
-            //list.commands.push(Command::Text(styled_node.children[0].node.node_type.clone(), layout_box.dimensions.content.clone(), color.clone(), 16.0));
-        }
-        if let Some(Value::Length(font_size, _)) = styled_node.get_property("font-size") {
-            default_font_size = font_size.clone();
-        }
-        if styled_node.children.len() > 0 {
-            if let NodeType::Text(ref text) = styled_node.children[0].node.node_type {
-                list.commands.push(Command::Text(text.to_string(), layout_box.dimensions.content.clone(), default_color.clone(), default_font_size.clone()));
-            } 
-        }
-    }   
-    // Arka plan rengini çiz
+    // 1. ÖNCE ARKA PLAN RENGİNİ ÇİZ (en altta olmalı)
     if let Some(styled_node) = layout_box.styled_node {
         if let Some(Value::Color(color)) = styled_node.get_property("background-color") {
             list.commands.push(Command::SolidColor(color.clone(), layout_box.dimensions.border_box()));
         }
     }
 
-    // Kenarlıkları çiz
+    // 2. SONRA KENARLIKLARI ÇİZ
     if layout_box.dimensions.border.top > 0.0 || layout_box.dimensions.border.bottom > 0.0 ||
        layout_box.dimensions.border.left > 0.0 || layout_box.dimensions.border.right > 0.0 {
         if let Some(styled_node) = layout_box.styled_node {
@@ -78,9 +66,26 @@ fn render_layout_box(list: &mut DisplayList, layout_box: &LayoutBox) {
         }
     }
 
-    // Çocukları render et
+    // 3. ÇOCUKLARI RENDER ET (içerik)
     for child in &layout_box.children {
         render_layout_box(list, child);
+    }
+
+    // 4. EN SON METİN DÜĞÜMLERİNİ ÇİZ (en üstte olmalı)
+    let mut default_color = Color::RGBA(0, 0, 0, 1.0);
+    let mut default_font_size = 16.0;
+    if let Some(styled_node) = layout_box.styled_node {
+        if let Some(Value::Color(color)) = styled_node.get_property("color") {
+            default_color = color.clone();
+        }
+        if let Some(Value::Length(font_size, _)) = styled_node.get_property("font-size") {
+            default_font_size = font_size.clone();
+        }
+        if styled_node.children.len() > 0 {
+            if let NodeType::Text(ref text) = styled_node.children[0].node.node_type {
+                list.commands.push(Command::Text(text.to_string(), layout_box.dimensions.content.clone(), default_color.clone(), default_font_size.clone()));
+            } 
+        }
     }
 }
 
@@ -152,5 +157,4 @@ pub fn paint_to_image(display_list: &DisplayList, width: u32, height: u32, filen
     }
 
     img.save(filename).expect("Failed to save image");
-    println!("Resim {} dosyasına kaydedildi.", filename);
 }
